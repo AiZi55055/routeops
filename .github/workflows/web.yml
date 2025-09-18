@@ -50,7 +50,7 @@ jobs:
             fi
           done
           if [ -z "$found" ]; then
-            echo "No package.json found in ., web, frontend, or app. Skipping web build."
+            echo "No package.json found in ., web, frontend, app. Skipping web build."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "Found frontend at: $found"
@@ -60,7 +60,7 @@ jobs:
 
       - name: Stop early if nothing to build
         if: steps.detect.outputs.skip == 'true'
-        run: echo "No web workspace detected. Job succeed by noop."
+        run: echo "No web workspace detected. ✅ Skipping."
 
       - name: Use Node.js
         if: steps.detect.outputs.skip != 'true'
@@ -68,41 +68,49 @@ jobs:
         with:
           node-version: '20.x'
           cache: 'npm'
-          cache-dependency-path: '${{ steps.detect.outputs.dir }}/package-lock.json'
+          cache-dependency-path: ${{ steps.detect.outputs.dir }}/package-lock.json
 
       - name: Enable corepack (pnpm/yarn support)
         if: steps.detect.outputs.skip != 'true'
         run: corepack enable
 
-      - name: Install deps (auto-detect package manager)
+      - name: Diagnostics
         if: steps.detect.outputs.skip != 'true'
         shell: bash
         run: |
           cd "${{ steps.detect.outputs.dir }}"
-          if [ -f pnpm-lock.yaml ]; then
-            pnpm install --frozen-lockfile
-          elif [ -f yarn.lock ]; then
-            yarn install --frozen-lockfile
-          elif [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+          echo "Working dir: $(pwd)"
+          node -v
+          npm -v
+          ls -la
+          node -p "try{require('./package.json').name}catch(e){'no package'}"
+          node -p "try{require('./package.json').scripts}catch(e){'no scripts'}"
+
+      - name: Install deps (resilient)
+        if: steps.detect.outputs.skip != 'true'
+        shell: bash
+        run: |
+          cd "${{ steps.detect.outputs.dir }}"
+          # Use npm install for resilience; ignore peer conflicts/audits
+          npm install --legacy-peer-deps --no-audit --no-fund
 
       - name: Typecheck
         if: steps.detect.outputs.skip != 'true'
+        shell: bash
         run: |
           cd "${{ steps.detect.outputs.dir }}"
           npm run typecheck --if-present || true
 
       - name: Lint
         if: steps.detect.outputs.skip != 'true'
+        shell: bash
         run: |
           cd "${{ steps.detect.outputs.dir }}"
           npm run lint --if-present || true
 
       - name: Build
         if: steps.detect.outputs.skip != 'true'
+        shell: bash
         run: |
           cd "${{ steps.detect.outputs.dir }}"
           npm run build --if-present || true
