@@ -1,0 +1,28 @@
+// firestore.rules (sketch)
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function isAdminOrSupervisor() { return request.auth.token.role in ['admin','supervisor']; }
+    function isMessenger(m) { return request.auth != null && request.auth.uid == m; }
+
+    match /routes/{routeId} {
+      allow read: if isAdminOrSupervisor(); // expand as needed
+      // updates handled via callable (recommended) -> deny direct writes
+      allow write: if false;
+
+      match /stops/{stopId} {
+        allow read: if isAdminOrSupervisor();
+        allow write: if false; // use callable
+      }
+    }
+
+    match /assignments/{id} {
+      allow read: if isAdminOrSupervisor();
+      allow write: if false;
+    }
+
+    match /proof/{any} {
+      allow read, write: if isAdminOrSupervisor();
+    }
+  }
+}
