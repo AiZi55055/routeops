@@ -2,6 +2,7 @@ import ReactDOM from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
 import { router } from '@/app/router';
 import { registerStartupEffects } from '@/app/startup';
+import './pwa';
 
 // IMPORTANT: include Leaflet CSS once
 import 'leaflet/dist/leaflet.css';
