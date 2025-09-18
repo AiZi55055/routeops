@@ -1,0 +1,50 @@
+@"
+name: CI — Functions
+
+on:
+  push:
+    paths:
+      - 'functions/**'
+      - '.github/workflows/functions.yml'
+      - 'functions/package.json'
+      - 'functions/package-lock.json'
+      - 'functions/pnpm-lock.yaml'
+      - 'functions/yarn.lock'
+  pull_request:
+    paths:
+      - 'functions/**'
+      - '.github/workflows/functions.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: functions
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js \${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: \${{ matrix['node-version'] }}
+          cache: 'npm'
+          cache-dependency-path: 'functions/package-lock.json'
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck --if-present
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Build
+        run: npm run build --if-present
+"@ | Set-Content -Encoding UTF8 ".github/workflows/functions.yml"
